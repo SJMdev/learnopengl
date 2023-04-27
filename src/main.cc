@@ -4,11 +4,39 @@
 #include <string> 
 #include <fstream> // file_to_string
 #include <sstream> // file_to_string
-
+#include "shader.h"
+#include "stb_image.h"
 
 std::string file_to_string(const std::string& path);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+
+void GLAPIENTRY opengl_debug_callback(
+	GLenum source,
+	GLenum type,
+	GLuint id,
+	GLenum severity,
+	GLsizei length,
+	const GLchar* message,
+	const void* user_param) {
+
+	std::cerr << "[OPENGL] debug message: " << message << '\n';
+}
+
+float position_color_texture_vertices[] = {
+	// positions          // colors           // texture coords
+	 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+	 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+	-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+	-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
+};
+
+float position_color_vertices[] = {
+	// positions         // colors
+	 0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
+	-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
+	 0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
+};
 
 float vertices[] = {
 	-0.5f, -0.5f, 0.0f,
@@ -30,17 +58,19 @@ unsigned int indices[] = {  // note that we start from 0!
 
 int main() {
 	
-	std::cerr << "hello world!\n" << '\n';
-
 	// window stuff.
 	GLFWwindow* window = nullptr;
 	const int window_width = 800;
 	const int window_height = 600;
 	{
 		glfwInit();
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		//@NOTE(SJM): we cannot open a debug context on 3.3..? force 4.5.
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+		//@NOTE(SJM): we need this window hint, otherwise we cannot get the debug profile.
+		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+		
 		//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	
 		window = glfwCreateWindow(window_width, window_height, "LearnOpenGL", NULL, NULL);
@@ -53,7 +83,7 @@ int main() {
 
 		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 		{
-			std::cout << "failed to initialize GlAD.\n";
+			std::cerr << "failed to initialize GlAD.\n";
 			return -1;
 		}
 
@@ -63,78 +93,20 @@ int main() {
 		glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	}
 
-
-	// openGL info.
+	// modify global openGL state and retrieve config.
 	{
-		int nrAttributes;
+		glEnable(GL_DEBUG_OUTPUT);
+		glDebugMessageCallback(opengl_debug_callback, 0);
+		int nrAttributes = 0;
 		glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
 		std::cerr << "[info] Maximum nr of vertex attributes supported: " << nrAttributes << std::endl;
 	}
 
 
-	std::string vertexShaderString = file_to_string("C:/Users/sjors/Desktop/learnopengl/project/shaders/passthrough.vert");
-	std::string fragmentShaderString = file_to_string("C:/Users/sjors/Desktop/learnopengl/project/shaders/passthrough.frag");
-	const char* vertexShaderSource = vertexShaderString.data();
-	const char* fragmentShaderSource = fragmentShaderString.data();
-
-	// create vertex shader.
-	unsigned int vertexShader;
-	{
-		vertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-		glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-		glCompileShader(vertexShader);
-
-		// was shader compilation successful?
-		int  success;
-		char infoLog[512];
-		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-		if (!success)
-		{
-			glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-			std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-		}
-	}
-
-	// create fragment shader
-	unsigned int fragmentShader;
-	{
-		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-		glCompileShader(fragmentShader);
-		
-		// was shader compilation successful?
-		int  success;
-		char infoLog[512];
-		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-		if (!success)
-		{
-			glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-			std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-		}
-	}
-
-	// create shader program.
-	unsigned int shaderProgram;
-	{
-		shaderProgram = glCreateProgram();
-		glAttachShader(shaderProgram, vertexShader);
-		glAttachShader(shaderProgram, fragmentShader);
-		glLinkProgram(shaderProgram);
-		int  success;
-		char infoLog[512];
-		glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-		if (!success)
-		{
-			glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-			std::cerr << "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n" << infoLog << std::endl;
-		}
-	}
-	// these shaders are bound to the shader program and we are free to delete them
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
-
-
+	Shader shader(
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/texture.vert",
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/texture.frag"
+	);
 
 	// create buffers.
 	// our VAO stores our vertex attribute configuration and which VBO to use.
@@ -152,19 +124,78 @@ int main() {
 	glBindVertexArray(VAO);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(position_color_texture_vertices), position_color_texture_vertices, GL_STATIC_DRAW);
 	
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	
-	//glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
 
+	unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);  
+	// set the texture wrapping/filtering options (on the currently bound texture object)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
+	// load a texture
+	const char* texture_path = "C:/Users/sjors/Desktop/learnopengl/project/img/textures/container.jpg";
+	int width;
+	int height;
+	int nrChannels;
+	unsigned char* data = stbi_load(
+		texture_path,
+		&width,
+		&height,
+		&nrChannels,
+		0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cerr << "failed to load texture " << texture_path << '\n';
+	}
+	stbi_image_free(data);
+
+	// load second texture.
+	unsigned int face_texture;
+	glGenTextures(1, &face_texture);
+	glBindTexture(GL_TEXTURE_2D, face_texture);
+
+	// set the texture wrapping/filtering options (on the currently bound texture object)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	data = stbi_load("C:/Users/sjors/Desktop/learnopengl/project/img/textures/awesomeface.png", &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+
+	// update uniforms
+	shader.use();
+	{
+		shader.setInt("texture0", 0);
+		shader.setInt("texture1", 1);
+	}
 
 
 	while (!glfwWindowShouldClose(window))
@@ -176,19 +207,17 @@ int main() {
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glUseProgram(shaderProgram);
-		// update uniform color.
 		{
-			// set uniforms
-			float timeValue = glfwGetTime();
-			float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
-			int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-			glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+			// bind textures on corresponding texture units
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, face_texture);
 		}
-
+		shader.use();
 		glBindVertexArray(VAO);
-		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		//glDrawArrays(GL_TRIANGLES, 0, 3);
 		// check and call events and swap the buffers.
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -199,21 +228,6 @@ int main() {
 }
 
 
-// https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-std::string file_to_string(const std::string& path) {
-	// Open the file
-	std::ifstream file(path);
-	if (!file.is_open()) {
-		std::cerr << "[error] could not open file " << path << '\n';
-	}
-
-	// Read the contents of the file into a stringstream
-	std::stringstream buffer;
-	buffer << file.rdbuf();
-
-	// Return the contents of the stringstream as a string
-	return buffer.str();
-}
 
 
 void processInput(GLFWwindow* window) {
