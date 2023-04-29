@@ -2,13 +2,13 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <string> 
-#include <fstream> // file_to_string
-#include <sstream> // file_to_string
-#include "shader.h"
-#include "stb_image.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include "shader.h"
+#include "stb_image.h"
+#include "camera.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -26,7 +26,55 @@ void GLAPIENTRY opengl_debug_callback(
 	std::cerr << "[OPENGL] debug message: " << message << '\n';
 }
 
+const unsigned int window_width = 800;
+const unsigned int window_height = 600;
+
+
 float cube_vertices[] = {
+	-0.5f, -0.5f, -0.5f,
+	 0.5f, -0.5f, -0.5f,
+	 0.5f,  0.5f, -0.5f,
+	 0.5f,  0.5f, -0.5f,
+	-0.5f,  0.5f, -0.5f,
+	-0.5f, -0.5f, -0.5f,
+
+	-0.5f, -0.5f,  0.5f,
+	 0.5f, -0.5f,  0.5f,
+	 0.5f,  0.5f,  0.5f,
+	 0.5f,  0.5f,  0.5f,
+	-0.5f,  0.5f,  0.5f,
+	-0.5f, -0.5f,  0.5f,
+
+	-0.5f,  0.5f,  0.5f,
+	-0.5f,  0.5f, -0.5f,
+	-0.5f, -0.5f, -0.5f,
+	-0.5f, -0.5f, -0.5f,
+	-0.5f, -0.5f,  0.5f,
+	-0.5f,  0.5f,  0.5f,
+
+	 0.5f,  0.5f,  0.5f,
+	 0.5f,  0.5f, -0.5f,
+	 0.5f, -0.5f, -0.5f,
+	 0.5f, -0.5f, -0.5f,
+	 0.5f, -0.5f,  0.5f,
+	 0.5f,  0.5f,  0.5f,
+
+	-0.5f, -0.5f, -0.5f,
+	 0.5f, -0.5f, -0.5f,
+	 0.5f, -0.5f,  0.5f,
+	 0.5f, -0.5f,  0.5f,
+	-0.5f, -0.5f,  0.5f,
+	-0.5f, -0.5f, -0.5f,
+
+	-0.5f,  0.5f, -0.5f,
+	 0.5f,  0.5f, -0.5f,
+	 0.5f,  0.5f,  0.5f,
+	 0.5f,  0.5f,  0.5f,
+	-0.5f,  0.5f,  0.5f,
+	-0.5f,  0.5f, -0.5f,
+};
+
+float cube_texture_vertices[] = {
 		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
 		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
@@ -121,22 +169,22 @@ glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
+// timing
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
-float lastX = 400; // mouse 
-float lastY = 300; // mouse
 
-float pitch;
-float yaw; 
-float roll;
+// camera 
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+float lastX = window_width / 2.0f; // mouse 
+float lastY = window_height / 2.0f; // mouse
 
+glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
 int main() {
 	
 	// window stuff.
 	GLFWwindow* window = nullptr;
-	const int window_width = 800;
-	const int window_height = 600;
+
 	const float aspect_ratio = static_cast<float>(window_width) / static_cast<float>(window_height);
 	// glfw init.
 	{
@@ -180,111 +228,61 @@ int main() {
 	{
 		glEnable(GL_DEBUG_OUTPUT);
 		glDebugMessageCallback(opengl_debug_callback, 0);
-		int nrAttributes = 0;
-		glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
-		std::cerr << "[info] Maximum nr of vertex attributes supported: " << nrAttributes << std::endl;
-
+		int attributes = 0;
+		glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &attributes);
+		std::cerr << "[info] Maximum nr of vertex attributes supported: " << attributes << std::endl;
+		int max_uniform_block_size = 0;
+		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &max_uniform_block_size);
+		std::cerr << "[info] Max uniform block size (in bytes): " << max_uniform_block_size << std::endl;
 		glEnable(GL_DEPTH_TEST);
 	}
 
-
-	Shader shader(
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/coordinate_systems.vert",
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/coordinate_systems.frag"
+	Shader lightingShader(
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/light.vert",
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/light.frag"
 	);
+
+	Shader lightCubeShader(
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/light_cube.vert",
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/light_cube.frag"
+	);
+
+
 
 	// create buffers.
 	// our VAO stores our vertex attribute configuration and which VBO to use.
 	// the moment we want to draw one of our objects, we take the corresponding VAO, bind it,
 	// then draw the object and unbind the VAO again.
 	// draw triangle
-	unsigned int VAO;
-	unsigned int VBO;
-	unsigned int EBO;
-	{
-		glGenVertexArrays(1, &VAO);
-		glGenBuffers(1, &VBO);
-		glGenBuffers(1, &EBO);
+	unsigned int cubeVAO;
+	unsigned int lightCubeVAO;
+	unsigned int cubeVBO;
 
-		glBindVertexArray(VAO);
-	
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	{
+		glGenVertexArrays(1, &cubeVAO);
+		glGenBuffers(1, &cubeVBO);
+		
+		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
-	
-		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+		glBindVertexArray(cubeVAO);
+
+		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		//glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		//glEnableVertexAttribArray(2);
 
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
+		glGenVertexArrays(1, &lightCubeVAO);
+		glBindVertexArray(lightCubeVAO);
+
+		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
 
 	}
 
 
-	// create texture no1.
-	unsigned int texture;
-	{
-		glGenTextures(1, &texture);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		// set the texture wrapping/filtering options (on the currently bound texture object)
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		// load a texture
-		const char* texture_path = "C:/Users/sjors/Desktop/learnopengl/project/img/textures/container.jpg";
-		int width;
-		int height;
-		int nrChannels;
-		unsigned char* data = stbi_load(
-			texture_path,
-			&width,
-			&height,
-			&nrChannels,
-			0);
-		if (data)
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-		else
-		{
-			std::cerr << "failed to load texture " << texture_path << '\n';
-		}
-		stbi_image_free(data);
-	}
-	
-
-	// load second texture.
-	unsigned int face_texture;
-	{
-		glGenTextures(1, &face_texture);
-		glBindTexture(GL_TEXTURE_2D, face_texture);
-
-		// set the texture wrapping/filtering options (on the currently bound texture object)
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		int width;
-		int height;
-		int nrChannels;
-		unsigned char* data = stbi_load("C:/Users/sjors/Desktop/learnopengl/project/img/textures/awesomeface.png", &width, &height, &nrChannels, 0);
-		if (data)
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-	}
-	
 	// establish transformation matrix.
 	glm::mat4 transformation = glm::mat4(1.0f);
 	{
@@ -293,45 +291,12 @@ int main() {
 	}
 	// establish model matrix
 	glm::mat4 model = glm::mat4(1.0f);
-	{
-		model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-	}
-
 	// establish view matrix
 	glm::mat4 view = glm::mat4(1.0f);
-	{
-		glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-		glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-		// huh? this is the inverse direction? this is pointing to the camera.
-		glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
-		glm::vec3 world_up = glm::vec3(0.0f, 1.0f, 0.0f);
-		glm::vec3 cameraRight = glm::normalize(glm::cross(world_up, cameraDirection));
-		glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
-	}
-
-	float fov = 90.0f;
-	glm::mat4 projection;
-	{
-		projection = glm::perspective(glm::radians(90.0f), aspect_ratio, 0.1f, 1000.0f);
-	}
 	
-	// update uniforms
-	shader.use();
-	{
-		shader.setInt("texture0", 0);
-		shader.setInt("texture1", 1);
-
-		int modelLocation = glGetUniformLocation(shader.ID, "model");
-		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
-
-		int viewLocation = glGetUniformLocation(shader.ID, "view");
-		glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
-
-		int projectionLocation = glGetUniformLocation(shader.ID, "projection");
-		glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
-
-
-	}
+	// establish projection matrix.
+	glm::mat4 projection;
+	
 
 
 	while (!glfwWindowShouldClose(window))
@@ -344,56 +309,46 @@ int main() {
 		processInput(window);
 			
 		// rendering commands here
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		// since we use a depth buffer, we should also clear that.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-		shader.use();
+		lightingShader.use();
+		// set uniforms.
 		{
-			// bind textures on corresponding texture units
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, face_texture);
-		}
+			lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+			lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 
-		glBindVertexArray(VAO);
+			// view/projection transformations
+			glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)window_width / (float)window_height, 0.1f, 100.0f);
+			glm::mat4 view = camera.GetViewMatrix();
+			lightingShader.setMat4("projection", projection);
+			lightingShader.setMat4("view", view);
 
-		for (size_t cube_idx = 0; cube_idx < 10; ++cube_idx)
-		{
-			// update view matrix uniform to swirl around.
-			//{
-			//	const float radius = 10.0f;
-			//	float camX = sin(glfwGetTime()) * radius;
-			//	float camZ = cos(glfwGetTime()) * radius;
-			//	// note that we're translating the scene in the reverse direction of where we want to move
-			//	view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0f, 0.0));
-			//	int viewLocation = glGetUniformLocation(shader.ID, "view");
-			//	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
-			//}
+			// world transformation
+			glm::mat4 model = glm::mat4(1.0f);
+			lightingShader.setMat4("model", model);
 			
-			// update view matrix to  
-			{
-				view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-				int viewLocation = glGetUniformLocation(shader.ID, "view");
-				glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
-			}
-
-
-
-			// update model matrix uniform.
-			{
-				auto model = glm::mat4(1.0f);
-				model = glm::translate(model, cubePositions[cube_idx]);
-				float angle = 20.0f * cube_idx;
-				model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-				int modelLocation = glGetUniformLocation(shader.ID, "model");
-				glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
-			}
+			// render the cube.
+			glBindVertexArray(cubeVAO);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 
+		}
+
+		lightCubeShader.use();
+		{
+			glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)window_width / (float)window_height, 0.1f, 100.0f);
+			glm::mat4 view = camera.GetViewMatrix();
+			lightCubeShader.setMat4("projection", projection);
+			lightCubeShader.setMat4("view", view);
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, lightPos);
+			model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
+			lightCubeShader.setMat4("model", model);
+
+
+			glBindVertexArray(lightCubeVAO);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
 		// check and call events and swap the buffers.
@@ -457,23 +412,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	lastX = xpos;
 	lastY = ypos;
 
-	const float sensitivity = 0.3f;
-	xoffset *= sensitivity;
-	yoffset *= sensitivity;
-
-	yaw += xoffset;
-	pitch += yoffset;
-
-
-	if (pitch > 89.0f)
-		pitch = 89.0f;
-	if (pitch < -89.0f)
-		pitch = -89.0f;
-
-	glm::vec3 direction;
-	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	direction.y = sin(glm::radians(pitch));
-	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	cameraFront = glm::normalize(direction);
+	
+	camera.ProcessMouseMovement(xoffset, yoffset, GL_TRUE);
 
 }
