@@ -25,6 +25,64 @@ void GLAPIENTRY opengl_debug_callback(
 	std::cerr << "[OPENGL] debug message: " << message << '\n';
 }
 
+float cube_vertices[] = {
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+};
+
+glm::vec3 cubePositions[] = {
+	glm::vec3(0.0f,  0.0f,  0.0f),
+	glm::vec3(2.0f,  5.0f, -15.0f),
+	glm::vec3(-1.5f, -2.2f, -2.5f),
+	glm::vec3(-3.8f, -2.0f, -12.3f),
+	glm::vec3(2.4f, -0.4f, -3.5f),
+	glm::vec3(-1.7f,  3.0f, -7.5f),
+	glm::vec3(1.3f, -2.0f, -2.5f),
+	glm::vec3(1.5f,  2.0f, -2.5f),
+	glm::vec3(1.5f,  0.2f, -1.5f),
+	glm::vec3(-1.3f,  1.0f, -1.5f)
+};
+
+
 float position_color_texture_vertices[] = {
 	// positions          // colors           // texture coords
 	 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
@@ -64,6 +122,8 @@ int main() {
 	GLFWwindow* window = nullptr;
 	const int window_width = 800;
 	const int window_height = 600;
+	const float aspect_ratio = static_cast<float>(window_width) / static_cast<float>(window_height);
+	// glfw init.
 	{
 		glfwInit();
 		//@NOTE(SJM): we cannot open a debug context on 3.3..? force 4.5.
@@ -102,12 +162,14 @@ int main() {
 		int nrAttributes = 0;
 		glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
 		std::cerr << "[info] Maximum nr of vertex attributes supported: " << nrAttributes << std::endl;
+
+		glEnable(GL_DEPTH_TEST);
 	}
 
 
 	Shader shader(
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/texture.vert",
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/texture.frag"
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/coordinate_systems.vert",
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/coordinate_systems.frag"
 	);
 
 	// create buffers.
@@ -126,17 +188,17 @@ int main() {
 		glBindVertexArray(VAO);
 	
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(position_color_texture_vertices), position_color_texture_vertices, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
 	
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
+		//glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		//glEnableVertexAttribArray(2);
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
@@ -208,6 +270,24 @@ int main() {
 		transformation = glm::translate(transformation, glm::vec3(0.5f, -0.5f, 0.0f));
 		transformation = glm::rotate(transformation, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 	}
+	// establish model matrix
+	glm::mat4 model = glm::mat4(1.0f);
+	{
+		model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	}
+
+	// establish view matrix
+	glm::mat4 view = glm::mat4(1.0f);
+	{
+		// note that we're translating the scene in the reverse direction of where we want to move
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+	}
+
+	float fov = 90.0f;
+	glm::mat4 projection;
+	{
+		projection = glm::perspective(glm::radians(90.0f), aspect_ratio, 0.1f, 1000.0f);
+	}
 	
 	// update uniforms
 	shader.use();
@@ -215,8 +295,16 @@ int main() {
 		shader.setInt("texture0", 0);
 		shader.setInt("texture1", 1);
 
-		unsigned int transformLoc = glGetUniformLocation(shader.ID, "transform");
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformation));
+		int modelLocation = glGetUniformLocation(shader.ID, "model");
+		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+
+		int viewLocation = glGetUniformLocation(shader.ID, "view");
+		glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
+
+		int projectionLocation = glGetUniformLocation(shader.ID, "projection");
+		glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
+
+
 	}
 
 
@@ -227,7 +315,10 @@ int main() {
 			
 		// rendering commands here
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+
+		// since we use a depth buffer, we should also clear that.
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
 		shader.use();
 		{
@@ -237,19 +328,24 @@ int main() {
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, face_texture);
 		}
-		// update uniform.
-		{
-			glm::mat4 transformation = glm::mat4(1.0f);
-			{
-				transformation = glm::translate(transformation, glm::vec3(0.5f, -0.5f, 0.0f));
-				transformation = glm::rotate(transformation, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-				unsigned int transformLoc = glGetUniformLocation(shader.ID, "transform");
-				glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformation));
-			}
-		}
 
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		for (size_t cube_idx = 0; cube_idx < 10; ++cube_idx)
+		{
+			// update uniform.
+			{
+				auto model = glm::mat4(1.0f);
+				model = glm::translate(model, cubePositions[cube_idx]);
+				float angle = 20.0f * cube_idx;
+				model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+				int modelLocation = glGetUniformLocation(shader.ID, "model");
+				glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+			}
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		}
+
 		// check and call events and swap the buffers.
 		glfwSwapBuffers(window);
 		glfwPollEvents();
