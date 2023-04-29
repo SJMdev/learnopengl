@@ -30,6 +30,50 @@ const unsigned int window_width = 800;
 const unsigned int window_height = 600;
 
 
+float cube_normal_vertices[] = {
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+};
+
 float cube_vertices[] = {
 	-0.5f, -0.5f, -0.5f,
 	 0.5f, -0.5f, -0.5f,
@@ -238,15 +282,14 @@ int main() {
 	}
 
 	Shader lightingShader(
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/light.vert",
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/light.frag"
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/materials.vert",
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/materials.frag"
 	);
 
 	Shader lightCubeShader(
 		"C:/Users/sjors/Desktop/learnopengl/project/shaders/light_cube.vert",
 		"C:/Users/sjors/Desktop/learnopengl/project/shaders/light_cube.frag"
 	);
-
 
 
 	// create buffers.
@@ -263,41 +306,29 @@ int main() {
 		glGenBuffers(1, &cubeVBO);
 		
 		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cube_normal_vertices), cube_normal_vertices, GL_STATIC_DRAW);
 
 		glBindVertexArray(cubeVAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
 
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		// position
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(0);
+		// normal.
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(1);
+
 
 		glGenVertexArrays(1, &lightCubeVAO);
 		glBindVertexArray(lightCubeVAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		// update this stride because we skip normals.
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(0);
 
 	}
-
-
-	// establish transformation matrix.
-	glm::mat4 transformation = glm::mat4(1.0f);
-	{
-		transformation = glm::translate(transformation, glm::vec3(0.5f, -0.5f, 0.0f));
-		transformation = glm::rotate(transformation, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-	}
-	// establish model matrix
-	glm::mat4 model = glm::mat4(1.0f);
-	// establish view matrix
-	glm::mat4 view = glm::mat4(1.0f);
-	
-	// establish projection matrix.
-	glm::mat4 projection;
-	
-
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -316,8 +347,24 @@ int main() {
 		lightingShader.use();
 		// set uniforms.
 		{
-			lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-			lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+			lightingShader.setVec3("light.position", lightPos);
+			lightingShader.setVec3("viewPos", camera.Position);
+			// light properties
+			glm::vec3 lightColor;
+			lightColor.x = static_cast<float>(sin(glfwGetTime() * 2.0));
+			lightColor.y = static_cast<float>(sin(glfwGetTime() * 0.7));
+			lightColor.z = static_cast<float>(sin(glfwGetTime() * 1.3));
+			glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // decrease the influence
+			glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // low influence
+			lightingShader.setVec3("light.ambient", ambientColor);
+			lightingShader.setVec3("light.diffuse", diffuseColor);
+			lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+
+			// material properties
+			lightingShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+			lightingShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
+			lightingShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f); // specular lighting doesn't have full effect on this object's material
+			lightingShader.setFloat("material.shininess", 32.0f);
 
 			// view/projection transformations
 			glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)window_width / (float)window_height, 0.1f, 100.0f);
@@ -341,7 +388,7 @@ int main() {
 			glm::mat4 view = camera.GetViewMatrix();
 			lightCubeShader.setMat4("projection", projection);
 			lightCubeShader.setMat4("view", view);
-			model = glm::mat4(1.0f);
+			glm::mat4 model = glm::mat4(1.0f);
 			model = glm::translate(model, lightPos);
 			model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
 			lightCubeShader.setMat4("model", model);
@@ -384,13 +431,13 @@ void processInput(GLFWwindow* window) {
 
 	const float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		cameraPos += cameraSpeed * cameraFront;
+		camera.ProcessKeyboard(FORWARD, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		cameraPos -= cameraSpeed * cameraFront;
+		camera.ProcessKeyboard(BACKWARD, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		camera.ProcessKeyboard(LEFT, deltaTime);;
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
