@@ -11,6 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
 
 void GLAPIENTRY opengl_debug_callback(
@@ -82,7 +83,6 @@ glm::vec3 cubePositions[] = {
 	glm::vec3(-1.3f,  1.0f, -1.5f)
 };
 
-
 float position_color_texture_vertices[] = {
 	// positions          // colors           // texture coords
 	 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
@@ -115,6 +115,21 @@ unsigned int indices[] = {  // note that we start from 0!
 	0, 1, 3,   // first triangle
 	1, 2, 3    // second triangle
 };
+
+
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+float deltaTime = 0.0f;	// Time between current frame and last frame
+float lastFrame = 0.0f; // Time of last frame
+float lastX = 400; // mouse 
+float lastY = 300; // mouse
+
+float pitch;
+float yaw; 
+float roll;
+
 
 int main() {
 	
@@ -153,6 +168,12 @@ int main() {
 		glViewport(0, 0, window_width, window_height);
 		// bind callback when window is resized to also resize viewport
 		glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+		// capture the mouse.
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		// bind it to the move callback.
+		glfwSetCursorPosCallback(window, mouse_callback);
+
 	}
 
 	// modify global openGL state and retrieve config.
@@ -279,8 +300,13 @@ int main() {
 	// establish view matrix
 	glm::mat4 view = glm::mat4(1.0f);
 	{
-		// note that we're translating the scene in the reverse direction of where we want to move
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+		glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+		// huh? this is the inverse direction? this is pointing to the camera.
+		glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
+		glm::vec3 world_up = glm::vec3(0.0f, 1.0f, 0.0f);
+		glm::vec3 cameraRight = glm::normalize(glm::cross(world_up, cameraDirection));
+		glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
 	}
 
 	float fov = 90.0f;
@@ -310,6 +336,10 @@ int main() {
 
 	while (!glfwWindowShouldClose(window))
 	{
+		float currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+
 		// input
 		processInput(window);
 			
@@ -333,7 +363,27 @@ int main() {
 
 		for (size_t cube_idx = 0; cube_idx < 10; ++cube_idx)
 		{
-			// update uniform.
+			// update view matrix uniform to swirl around.
+			//{
+			//	const float radius = 10.0f;
+			//	float camX = sin(glfwGetTime()) * radius;
+			//	float camZ = cos(glfwGetTime()) * radius;
+			//	// note that we're translating the scene in the reverse direction of where we want to move
+			//	view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0f, 0.0));
+			//	int viewLocation = glGetUniformLocation(shader.ID, "view");
+			//	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
+			//}
+			
+			// update view matrix to  
+			{
+				view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+				int viewLocation = glGetUniformLocation(shader.ID, "view");
+				glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
+			}
+
+
+
+			// update model matrix uniform.
 			{
 				auto model = glm::mat4(1.0f);
 				model = glm::translate(model, cubePositions[cube_idx]);
@@ -357,7 +407,6 @@ int main() {
 
 
 
-
 void processInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, true);
@@ -376,10 +425,55 @@ void processInput(GLFWwindow* window) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			return; 
 		}
-		
 	}
+
+	const float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		cameraPos += cameraSpeed * cameraFront;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		cameraPos -= cameraSpeed * cameraFront;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+	static bool firstMouse = true;
+
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; // reversed since y-coordinates range from bottom to top
+	lastX = xpos;
+	lastY = ypos;
+
+	const float sensitivity = 0.3f;
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
+
+	glm::vec3 direction;
+	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	direction.y = sin(glm::radians(pitch));
+	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	cameraFront = glm::normalize(direction);
+
 }

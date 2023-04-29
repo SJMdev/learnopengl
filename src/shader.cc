@@ -14,7 +14,7 @@ namespace {
 		buffer << file.rdbuf();
 
 		// Return the contents of the stringstream as a string
-		return buffer.str();
+		return std::move(buffer.str());
 	}
 
 }
