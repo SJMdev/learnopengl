@@ -327,8 +327,8 @@ int main() {
 	}
 
 	Shader lightingShader(
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/diffuse_specular.vert",
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/diffuse_specular.frag"
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/directional_light.vert",
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/directional_light.frag"
 	);
 
 	Shader lightCubeShader(
@@ -402,7 +402,8 @@ int main() {
 		// set uniforms.
 		{
 			lightingShader.use();
-			lightingShader.setVec3("light.position", lightPos);
+			//lightingShader.setVec3("light.position", lightPos);
+			lightingShader.setVec3("light.direction", -0.2f, -1.0f, -0.3f);
 			lightingShader.setVec3("viewPos", camera.Position);
 
 			// light properties
@@ -419,10 +420,7 @@ int main() {
 			lightingShader.setMat4("projection", projection);
 			lightingShader.setMat4("view", view);
 
-			// world transformation
-			glm::mat4 model = glm::mat4(1.0f);
-			lightingShader.setMat4("model", model);
-
+			
 
 			// update textures.
 			glActiveTexture(GL_TEXTURE0);
@@ -430,11 +428,24 @@ int main() {
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, specular_texture_id);
 
-			
-			// render the cube.
 			glBindVertexArray(cubeVAO);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
 
+			for (size_t cube_idx = 0; cube_idx != 10; ++cube_idx)
+			{
+				// world transformation
+				glm::mat4 model = glm::mat4(1.0f);
+				model = glm::translate(model, cubePositions[cube_idx]);
+				float angle = 20.0f * cube_idx;
+				model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+				lightingShader.setMat4("model", model);
+
+				// render the cube.
+				glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+			}
+			
+			
 		}
 
 		lightCubeShader.use();
