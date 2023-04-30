@@ -13,7 +13,7 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
-
+unsigned int loadTexture(char const* path);
 void GLAPIENTRY opengl_debug_callback(
 	GLenum source,
 	GLenum type,
@@ -116,6 +116,51 @@ float cube_vertices[] = {
 	 0.5f,  0.5f,  0.5f,
 	-0.5f,  0.5f,  0.5f,
 	-0.5f,  0.5f, -0.5f,
+};
+
+float cube_positions_normals_texture_vertices[] = {
+	// positions          // normals           // texture coords
+	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+
+	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+
+	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+
+	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+
+	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+
+	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+	 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 };
 
 float cube_texture_vertices[] = {
@@ -282,8 +327,8 @@ int main() {
 	}
 
 	Shader lightingShader(
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/materials.vert",
-		"C:/Users/sjors/Desktop/learnopengl/project/shaders/materials.frag"
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/diffuse_specular.vert",
+		"C:/Users/sjors/Desktop/learnopengl/project/shaders/diffuse_specular.frag"
 	);
 
 	Shader lightCubeShader(
@@ -306,29 +351,38 @@ int main() {
 		glGenBuffers(1, &cubeVBO);
 		
 		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(cube_normal_vertices), cube_normal_vertices, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cube_positions_normals_texture_vertices), cube_positions_normals_texture_vertices, GL_STATIC_DRAW);
 
 		glBindVertexArray(cubeVAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
 
 		// position
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(0);
 		// normal.
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 		glEnableVertexAttribArray(1);
 
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glEnableVertexAttribArray(2);
 
 		glGenVertexArrays(1, &lightCubeVAO);
 		glBindVertexArray(lightCubeVAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
 		// update this stride because we skip normals.
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(0);
 
 	}
+
+	unsigned int diffuse_texture_id = loadTexture("C:/Users/sjors/Desktop/learnopengl/project/img/textures/container_diffuse.png");
+	unsigned int specular_texture_id = loadTexture("C:/Users/sjors/Desktop/learnopengl/project/img/textures/container_specular.png");
+
+	lightingShader.use();
+	lightingShader.setInt("material.diffuse", 0);
+	lightingShader.setInt("material.specular", 1);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -347,24 +401,17 @@ int main() {
 		lightingShader.use();
 		// set uniforms.
 		{
+			lightingShader.use();
 			lightingShader.setVec3("light.position", lightPos);
 			lightingShader.setVec3("viewPos", camera.Position);
+
 			// light properties
-			glm::vec3 lightColor;
-			lightColor.x = static_cast<float>(sin(glfwGetTime() * 2.0));
-			lightColor.y = static_cast<float>(sin(glfwGetTime() * 0.7));
-			lightColor.z = static_cast<float>(sin(glfwGetTime() * 1.3));
-			glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // decrease the influence
-			glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // low influence
-			lightingShader.setVec3("light.ambient", ambientColor);
-			lightingShader.setVec3("light.diffuse", diffuseColor);
+			lightingShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+			lightingShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
 			lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
 			// material properties
-			lightingShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
-			lightingShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
-			lightingShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f); // specular lighting doesn't have full effect on this object's material
-			lightingShader.setFloat("material.shininess", 32.0f);
+			lightingShader.setFloat("material.shininess", 64.0f);
 
 			// view/projection transformations
 			glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)window_width / (float)window_height, 0.1f, 100.0f);
@@ -375,6 +422,14 @@ int main() {
 			// world transformation
 			glm::mat4 model = glm::mat4(1.0f);
 			lightingShader.setMat4("model", model);
+
+
+			// update textures.
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, diffuse_texture_id);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, specular_texture_id);
+
 			
 			// render the cube.
 			glBindVertexArray(cubeVAO);
@@ -462,4 +517,41 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	
 	camera.ProcessMouseMovement(xoffset, yoffset, GL_TRUE);
 
+}
+
+unsigned int loadTexture(char const* path)
+{
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+
+	int width, height, nrComponents;
+	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+	if (data)
+	{
+		GLenum format;
+		if (nrComponents == 1)
+			format = GL_RED;
+		else if (nrComponents == 3)
+			format = GL_RGB;
+		else if (nrComponents == 4)
+			format = GL_RGBA;
+
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
+	}
+	else
+	{
+		std::cout << "Texture failed to load at path: " << path << std::endl;
+		stbi_image_free(data);
+	}
+
+	return textureID;
 }
